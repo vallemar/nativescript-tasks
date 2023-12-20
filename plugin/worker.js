@@ -20,16 +20,16 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-require('globals');
+import '@nativescript/core/globals';
 
-onmessage = function(msg) {
+self.onmessage = function(msg) {
     var request = JSON.parse(msg.data);
 
     var func;
     if (request.func) {
         eval('func = function(' + request.func.args.join(', ') + ') { ' + request.func.body + ' };');
     }
-    
+       
     var result;
     if (func) {
         result = func({
@@ -43,4 +43,3 @@ onmessage = function(msg) {
 
     postMessage(result);
 }
-exports.onmessage = onmessage;

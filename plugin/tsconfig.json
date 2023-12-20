@@ -1,11 +1,29 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "es5",
+        "strict": true,
+        "target": "esnext",
+        "module": "esnext",
+        "moduleResolution": "node",
+        "lib": [
+          "esnext",
+          "WebWorker"
+        ],
         "sourceMap": true,
+        "noEmitHelpers": true,
+        "importHelpers": true,
+        "baseUrl": ".",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "noEmitHelpers": true,
-        "noEmitOnError": true
-    }
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+    },
+    "include": [
+        "."
+      ],
+      
+  "exclude": [
+    "node_modules"
+  ]
 }

@@ -20,8 +20,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-import { Observable } from 'data/observable';
-import TypeUtils = require('utils/types');
+import { Observable } from '@nativescript/core';
 
 /**
  * Describes a task function.
@@ -66,6 +65,7 @@ export interface TaskResult<TState, TResult> {
  * List of task states.
  */
 export enum TaskStatus {
+     Starting,
     /**
      * The task has been initialized but has not yet been invoked.
      */
@@ -107,7 +107,7 @@ export class Task<TState, TResult> extends Observable {
     /**
      * Stores the current task state.
      */
-    protected _status: TaskStatus;
+    protected _status: TaskStatus = TaskStatus.Starting;
     
     /**
      * Initializes a new instance of that class.
@@ -117,7 +117,7 @@ export class Task<TState, TResult> extends Observable {
     constructor(func: TaskFunc<TState, TResult>) {
         super();
 
-        if (!TypeUtils.isNullOrUndefined(func)) {
+        if (func !== null && func !== undefined) {
             if (typeof func !== "function") {
                 throw "'func' must be a function!";
             }
@@ -209,8 +209,8 @@ export class Task<TState, TResult> extends Observable {
                     func = {};
                     
                     let funcStr = '' + me._FUNC;
-
-                    func.body = funcStr.match(/function[^{]+\{([\s\S]*)\}$/)[1];
+                    let functionMatch = funcStr.match(/function[^{]+\{([\s\S]*)\}$/);
+                    func.body = functionMatch ? functionMatch[1] : null;
 
                     // s. https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically-from-javascript
                     //
@@ -231,6 +231,7 @@ export class Task<TState, TResult> extends Observable {
                 }));
             }
             catch (e) {
+                console.log(e);
                 me.updateStatus(TaskStatus.Faulted);
 
                 completed(e);
@@ -302,5 +303,7 @@ export function newTask<TResult>(func: TaskFunc<any, TResult>): Task<any, TResul
  * @return {Promise<TResult>} The promise.
  */
 export function startNew<TResult, TState>(func: TaskFunc<TState, TResult>, state?: TState): Promise<TaskResult<TState, TResult>> {
+    console.log("HOLAAA");
+    
     return newTask<TResult>(func).start(state);
 }

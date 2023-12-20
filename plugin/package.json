@@ -37,5 +37,8 @@
     "url": "https://github.com/mkloubert/nativescript-tasks/issues"
   },
   "homepage": "https://github.com/mkloubert/nativescript-tasks",
-  "readmeFilename": "README.md"
+  "readmeFilename": "README.md",
+  "devDependencies": {
+    "@nativescript/core": "^8.6.1"
+  }
 }
