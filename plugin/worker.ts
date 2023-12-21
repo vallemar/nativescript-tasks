@@ -21,15 +21,16 @@
 // DEALINGS IN THE SOFTWARE.
 
 import '@nativescript/core/globals';
+import { JSONfn } from './JSONfn';
 
-self.onmessage = function(msg) {
+self.onmessage = function (msg) {
     var request = JSON.parse(msg.data);
 
-    var func;
-    if (request.func) {
-        eval('func = function(' + request.func.args.join(', ') + ') { ' + request.func.body + ' };');
-    }
-       
+    var func = JSONfn.parse(request.func.body);
+    /*     if (request.func) {
+            eval('func = function(' + request.func.args.join(', ') + ') { ' + request.func.body + ' };');
+        } */
+
     var result;
     if (func) {
         result = func({

@@ -21,6 +21,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 import { Observable } from '@nativescript/core';
+import { JSONfn } from './JSONfn';
 
 /**
  * Describes a task function.
@@ -65,7 +66,7 @@ export interface TaskResult<TState, TResult> {
  * List of task states.
  */
 export enum TaskStatus {
-     Starting,
+    Starting,
     /**
      * The task has been initialized but has not yet been invoked.
      */
@@ -108,7 +109,7 @@ export class Task<TState, TResult> extends Observable {
      * Stores the current task state.
      */
     protected _status: TaskStatus = TaskStatus.Starting;
-    
+
     /**
      * Initializes a new instance of that class.
      * 
@@ -122,7 +123,7 @@ export class Task<TState, TResult> extends Observable {
                 throw "'func' must be a function!";
             }
         }
-        
+
         this._FUNC = func;
 
         this.updateStatus(TaskStatus.Created);
@@ -155,7 +156,7 @@ export class Task<TState, TResult> extends Observable {
         return new Promise<TaskResult<TState, TResult>>((resolve, reject) => {
             let completed = (err: any, data?: TResult) => {
                 if (err) {
-                    reject({                     
+                    reject({
                         error: err,
                         state: state,
                     });
@@ -186,7 +187,7 @@ export class Task<TState, TResult> extends Observable {
 
                 let worker = new Worker('./worker');
 
-                worker.onmessage = function(msg) {
+                worker.onmessage = function (msg) {
                     worker.terminate();
 
                     let result = msg.data;
@@ -198,34 +199,32 @@ export class Task<TState, TResult> extends Observable {
                     completed(null, result);
                 };
 
-                worker.onerror = function(err) {
+                worker.onerror = function (err) {
                     me.updateStatus(TaskStatus.Faulted);
 
                     completed(err);
                 };
 
-                let func: any;
+                let func: any = {};
                 if (me._FUNC) {
-                    func = {};
-                    
-                    let funcStr = '' + me._FUNC;
+                    /* let funcStr =  me._FUNC.toString();
                     let functionMatch = funcStr.match(/function[^{]+\{([\s\S]*)\}$/);
-                    func.body = functionMatch ? functionMatch[1] : null;
-
+                    func.body = functionMatch ? functionMatch[1] : null; */
+                    func.body = JSONfn.stringify(me._FUNC);
                     // s. https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically-from-javascript
                     //
                     // author: humbletim (https://stackoverflow.com/users/1684079/humbletim)
-                    func.args = funcStr.replace(/[/][/].*$/mg,'')  // strip single-line comments
-                                       .replace(/\s+/g, '')  // strip white space
-                                       .replace(/[/][*][^/*]*[*][/]/g, '')  // strip multi-line comments  
-                                       .split('){', 1)[0].replace(/^[^(]*[(]/, '')  // extract the parameters  
-                                       .replace(/=[^,]+/g, '')  // strip any ES6 defaults  
-                                       .split(',')
-                                       .filter(x => x);  // remove empty values
+                    /*    func.args = funcStr.replace(/[/][/].*$/mg,'')  // strip single-line comments
+                                          .replace(/\s+/g, '')  // strip white space
+                                          .replace(/[/][*][^/*]*[*][/]/g, '')  // strip multi-line comments  
+                                          .split('){', 1)[0].replace(/^[^(]*[(]/, '')  // extract the parameters  
+                                          .replace(/=[^,]+/g, '')  // strip any ES6 defaults  
+                                          .split(',')
+                                          .filter(x => x);  */ // remove empty values
                 }
 
                 me.updateStatus(TaskStatus.Running);
-                worker.postMessage(JSON.stringify({ 
+                worker.postMessage(JSON.stringify({
                     func: func,
                     state: state,
                 }));
@@ -304,6 +303,6 @@ export function newTask<TResult>(func: TaskFunc<any, TResult>): Task<any, TResul
  */
 export function startNew<TResult, TState>(func: TaskFunc<TState, TResult>, state?: TState): Promise<TaskResult<TState, TResult>> {
     console.log("HOLAAA");
-    
+
     return newTask<TResult>(func).start(state);
 }
