@@ -74,7 +74,7 @@ import { Task } from "@vallemar/nativescript-task";
 Task.start((ctx) => {
   // access imported modules
   return ctx.myUtils.someFunction(1000) + ctx.otherLib.otherFunction(ctx.state);
-}, 1000)
+}, { state: 1000 })
   .then((result) => {
     console.log('Result: ' + result.data); 
   })
@@ -90,7 +90,7 @@ Task.start((ctx) => {
   const utils = ctx.myUtils as typeof myUtils; // <-- THIS
   const lib = ctx.otherLib as typeof otherLib; // <-- THIS
   return utils.someFunction(1000) + lib.otherFunction(ctx.state);
-}, 1000)
+}, { state: 1000 })
 ```
 
 ## Limitations
