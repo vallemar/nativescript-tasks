@@ -21,7 +21,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 import { Observable } from '@nativescript/core';
-import { JSONfn } from './JSONfn';
+import { JSONfn } from "./JSONfn"
 
 /**
  * Describes a task function.
@@ -30,7 +30,8 @@ import { JSONfn } from './JSONfn';
  * 
  * @return {TResult} The result of the function.
  */
-export type TaskFunc<TState, TResult> = (state?: TState) => TResult;
+export type TaskFunc<TState, TResult, TUpdate> = (ctx: { state: TState, onProgressUpdate: (dataUpdate: TUpdate) => void, [key: string]: any }) => TResult;
+export type TaskFuncUpdate<TUpdate> = (update: { data: TUpdate }) => void;
 
 /**
  * Describes a task context.
@@ -60,6 +61,14 @@ export interface TaskResult<TState, TResult> {
      * The submitted value.
      */
     state?: TState;
+}
+
+
+export interface TaskUpdate<TUpdate> {
+    /**
+     * The update data (on update)
+     */
+    data: TUpdate;
 }
 
 /**
@@ -92,15 +101,16 @@ export enum TaskStatus {
      */
     WaitingToRun,
 }
-
+let globalWorker: Worker = null!;
 /**
  * A task.
  */
-export class Task<TState, TResult> extends Observable {
+export class Task<TState, TResult, TUpdate> extends Observable {
     /**
      * Stores the function to invoke.
      */
-    protected readonly _FUNC: TaskFunc<TState, TResult>;
+    protected readonly _FUNC: TaskFunc<TState, TResult, TUpdate>;
+    protected readonly _FUNC_UPDATE: TaskFuncUpdate<TUpdate>;
     /**
      * Stores the error of the last execution.
      */
@@ -115,9 +125,8 @@ export class Task<TState, TResult> extends Observable {
      * 
      * @param {TaskFunc<TState, TResult>} func The function to invoke.
      */
-    constructor(func: TaskFunc<TState, TResult>) {
+    constructor(func: TaskFunc<TState, TResult, TUpdate>, funcUptade: TaskFuncUpdate<TUpdate>) {
         super();
-
         if (func !== null && func !== undefined) {
             if (typeof func !== "function") {
                 throw "'func' must be a function!";
@@ -125,10 +134,48 @@ export class Task<TState, TResult> extends Observable {
         }
 
         this._FUNC = func;
+        this._FUNC_UPDATE = funcUptade;
 
         this.updateStatus(TaskStatus.Created);
     }
 
+    public static initGlobalWorker(options: { moduleWorker: boolean } = { moduleWorker: true }) {
+        if (globalWorker == null) {
+            if (options.moduleWorker === true) {
+                globalWorker = new Worker('./worker');
+            } else {
+                globalWorker = new Worker('@/globalWorker');
+            }
+        }
+    }
+
+    public static finishGlobalWorker() {
+        globalWorker.terminate();
+        globalWorker = null!;
+    }
+
+    /**
+     * Creates a new task.
+     * 
+     * @param {TaskFunc<TResult>} func The function to invoke.
+     * 
+     * @return {Task<TResult>} The new task.
+     */
+    public static newTask<TResult, TUpdate>(func: TaskFunc<any, TResult, TUpdate>, onProgressUpdate: TaskFuncUpdate<TUpdate>): Task<any, TResult, TUpdate> {
+        return new Task<any, TResult, TUpdate>(func, onProgressUpdate);
+    }
+
+    /**
+     * Creates and starts a new task.
+     * 
+     * @param {TaskFunc<TResult>} func The function to invoke.
+     * @param {TState} [state] The optional value / object for the execution.
+     * 
+     * @return {Promise<TResult>} The promise.
+     */
+    public static start<TState, TResult, TUpdate>(func: TaskFunc<TState, TResult, TUpdate>, options: { state?: TState, onProgressUpdate: TaskFuncUpdate<TUpdate> }): Promise<TaskResult<TState, TResult>> {
+        return Task.newTask<TResult, TUpdate>(func, options?.onProgressUpdate).start(options);
+    }
     /**
      * Gets the error of the last execution.
      */
@@ -139,8 +186,15 @@ export class Task<TState, TResult> extends Observable {
     /**
      * Gets the underyling function to invoke.
      */
-    public get func(): TaskFunc<TState, TResult> {
+    public get func(): TaskFunc<TState, TResult, TUpdate> {
         return this._FUNC;
+    }
+
+    /**
+    * Gets the underyling upudate function to invoke.
+    */
+    public get funcUpdate(): TaskFuncUpdate<TUpdate> {
+        return this._FUNC_UPDATE;
     }
 
     /**
@@ -150,7 +204,7 @@ export class Task<TState, TResult> extends Observable {
      * 
      * @return {Promise<TaskResult<TState, TResult>>} The promise.
      */
-    public start<TState>(state?: TState): Promise<TaskResult<TState, TResult>> {
+    public start<TState>(options: { state?: TState }): Promise<TaskResult<TState, TResult>> {
         let me = this;
 
         return new Promise<TaskResult<TState, TResult>>((resolve, reject) => {
@@ -158,13 +212,13 @@ export class Task<TState, TResult> extends Observable {
                 if (err) {
                     reject({
                         error: err,
-                        state: state,
+                        state: options?.state,
                     });
                 }
                 else {
                     resolve({
                         data: data,
-                        state: state,
+                        state: options?.state,
                     });
                 }
 
@@ -185,52 +239,49 @@ export class Task<TState, TResult> extends Observable {
             try {
                 me.updateStatus(TaskStatus.WaitingToRun);
 
-                let worker = new Worker('./worker');
+                if (globalWorker == null) {
+                    Task.initGlobalWorker();
+                }
+                globalWorker.onmessage = function (msg) {
+                    // worker.terminate();
 
-                worker.onmessage = function (msg) {
-                    worker.terminate();
 
                     let result = msg.data;
                     if (result) {
                         result = JSON.parse(result);
                     }
 
-                    me.updateStatus(TaskStatus.RanToCompletion);
-                    completed(null, result);
+                    if (result?.onProgressUpdate === true) {
+                        if (me._FUNC_UPDATE) {
+                            me._FUNC_UPDATE({ data: (result.dataUpdate) })
+                        }
+                    } else {
+                        me.updateStatus(TaskStatus.RanToCompletion);
+                        completed(null, result);
+                    }
                 };
 
-                worker.onerror = function (err) {
+                globalWorker.onerror = function (err) {
                     me.updateStatus(TaskStatus.Faulted);
-
                     completed(err);
                 };
 
-                let func: any = {};
+                let func: any;
+
                 if (me._FUNC) {
-                    /* let funcStr =  me._FUNC.toString();
-                    let functionMatch = funcStr.match(/function[^{]+\{([\s\S]*)\}$/);
-                    func.body = functionMatch ? functionMatch[1] : null; */
+                    func = {};
                     func.body = JSONfn.stringify(me._FUNC);
-                    // s. https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically-from-javascript
-                    //
-                    // author: humbletim (https://stackoverflow.com/users/1684079/humbletim)
-                    /*    func.args = funcStr.replace(/[/][/].*$/mg,'')  // strip single-line comments
-                                          .replace(/\s+/g, '')  // strip white space
-                                          .replace(/[/][*][^/*]*[*][/]/g, '')  // strip multi-line comments  
-                                          .split('){', 1)[0].replace(/^[^(]*[(]/, '')  // extract the parameters  
-                                          .replace(/=[^,]+/g, '')  // strip any ES6 defaults  
-                                          .split(',')
-                                          .filter(x => x);  */ // remove empty values
                 }
 
                 me.updateStatus(TaskStatus.Running);
-                worker.postMessage(JSON.stringify({
+                globalWorker.postMessage(JSON.stringify({
                     func: func,
-                    state: state,
+                    state: options?.state
                 }));
             }
             catch (e) {
                 console.log(e);
+
                 me.updateStatus(TaskStatus.Faulted);
 
                 completed(e);
@@ -282,27 +333,3 @@ export class Task<TState, TResult> extends Observable {
     }
 }
 
-/**
- * Creates a new task.
- * 
- * @param {TaskFunc<TResult>} func The function to invoke.
- * 
- * @return {Task<TResult>} The new task.
- */
-export function newTask<TResult>(func: TaskFunc<any, TResult>): Task<any, TResult> {
-    return new Task<any, TResult>(func);
-}
-
-/**
- * Creates and starts a new task.
- * 
- * @param {TaskFunc<TResult>} func The function to invoke.
- * @param {TState} [state] The optional value / object for the execution.
- * 
- * @return {Promise<TResult>} The promise.
- */
-export function startNew<TResult, TState>(func: TaskFunc<TState, TResult>, state?: TState): Promise<TaskResult<TState, TResult>> {
-    console.log("HOLAAA");
-
-    return newTask<TResult>(func).start(state);
-}
