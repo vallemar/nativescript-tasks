@@ -22,6 +22,7 @@ import { Task } from "@vallemar/nativescript-task";
 
 // TS <number, string, boolean> = <InitialData, ReturnData, OnProgressData>
 Task.start<number, string, boolean>((ctx) => {
+  // ⚡ This function runs in the background
   ctx.onProgressUpdate(false);
   return ctx.state === 1000 ? "YES" : "NO";
 }, {
