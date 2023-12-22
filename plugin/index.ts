@@ -110,7 +110,7 @@ export class Task<TState, TResult, TUpdate> extends Observable {
      * Stores the function to invoke.
      */
     protected readonly _FUNC: TaskFunc<TState, TResult, TUpdate>;
-    protected readonly _FUNC_UPDATE: TaskFuncUpdate<TUpdate>;
+    protected readonly _FUNC_UPDATE?: TaskFuncUpdate<TUpdate>;
     /**
      * Stores the error of the last execution.
      */
@@ -125,7 +125,7 @@ export class Task<TState, TResult, TUpdate> extends Observable {
      * 
      * @param {TaskFunc<TState, TResult>} func The function to invoke.
      */
-    constructor(func: TaskFunc<TState, TResult, TUpdate>, funcUptade: TaskFuncUpdate<TUpdate>) {
+    constructor(func: TaskFunc<TState, TResult, TUpdate>, funcUptade?: TaskFuncUpdate<TUpdate>) {
         super();
         if (func !== null && func !== undefined) {
             if (typeof func !== "function") {
@@ -161,7 +161,7 @@ export class Task<TState, TResult, TUpdate> extends Observable {
      * 
      * @return {Task<TResult>} The new task.
      */
-    public static newTask<TResult, TUpdate>(func: TaskFunc<any, TResult, TUpdate>, onProgressUpdate: TaskFuncUpdate<TUpdate>): Task<any, TResult, TUpdate> {
+    public static newTask<TResult, TUpdate>(func: TaskFunc<any, TResult, TUpdate>, onProgressUpdate?: TaskFuncUpdate<TUpdate>): Task<any, TResult, TUpdate> {
         return new Task<any, TResult, TUpdate>(func, onProgressUpdate);
     }
 
@@ -173,7 +173,7 @@ export class Task<TState, TResult, TUpdate> extends Observable {
      * 
      * @return {Promise<TResult>} The promise.
      */
-    public static start<TState, TResult, TUpdate>(func: TaskFunc<TState, TResult, TUpdate>, options: { state?: TState, onProgressUpdate: TaskFuncUpdate<TUpdate> }): Promise<TaskResult<TState, TResult>> {
+    public static start<TState, TResult, TUpdate>(func: TaskFunc<TState, TResult, TUpdate>, options?: { state?: TState, onProgressUpdate?: TaskFuncUpdate<TUpdate> }): Promise<TaskResult<TState, TResult>> {
         return Task.newTask<TResult, TUpdate>(func, options?.onProgressUpdate).start(options);
     }
     /**
@@ -193,7 +193,7 @@ export class Task<TState, TResult, TUpdate> extends Observable {
     /**
     * Gets the underyling upudate function to invoke.
     */
-    public get funcUpdate(): TaskFuncUpdate<TUpdate> {
+    public get funcUpdate(): TaskFuncUpdate<TUpdate> | undefined {
         return this._FUNC_UPDATE;
     }
 
@@ -204,7 +204,7 @@ export class Task<TState, TResult, TUpdate> extends Observable {
      * 
      * @return {Promise<TaskResult<TState, TResult>>} The promise.
      */
-    public start<TState>(options: { state?: TState }): Promise<TaskResult<TState, TResult>> {
+    public start<TState>(options?: { state?: TState }): Promise<TaskResult<TState, TResult>> {
         let me = this;
 
         return new Promise<TaskResult<TState, TResult>>((resolve, reject) => {
