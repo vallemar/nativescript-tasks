@@ -70,7 +70,7 @@ Now access the modules defined in the globalWorker file from the context.
 ```ts
 import { Task } from "@vallemar/nativescript-task";
 
-Task.startNew((ctx) => {
+Task.start((ctx) => {
   // access imported modules
   return ctx.myUtils.someFunction(1000) + ctx.otherLib.otherFunction(ctx.state);
 }, 1000)
@@ -85,7 +85,7 @@ import { Task } from "@vallemar/nativescript-task";
 import { myUtils } from '@utils';
 import { otherLib } from 'other-lib';
 
-Task.startNew((ctx) => {
+Task.start((ctx) => {
   const utils = ctx.myUtils as typeof myUtils; // <-- THIS
   const lib = ctx.otherLib as typeof otherLib; // <-- THIS
   return utils.someFunction(1000) + lib.otherFunction(ctx.state);
