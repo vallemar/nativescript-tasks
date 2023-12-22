@@ -41,7 +41,7 @@ Task.start<number, string, boolean>((ctx) => {
 
 ### Using dependencies
 
-We initialize our worker with the `module Worker: true` flag, this will cause the library to import the worker that is defined in the next step.
+We initialize our worker with the `moduleWorker: true` flag, this will cause the library to import the worker that is defined in the next step.
 
 ```ts
 // app.ts | main.ts (entry file app)
