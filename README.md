@@ -28,7 +28,7 @@ Task.start<number, string, boolean>((ctx) => {
 }, {
     state: 1000,
     onProgressUpdate(update) {
-      console.log(update.data);
+      console.log('Update: ' + update.data);
     }
 })
   .then((result) => {
@@ -64,7 +64,7 @@ import { defineWorker } from "@vallemar/nativescript-task";
 import { myUtils } from '@utils';
 import { otherLib } from 'other-lib';
 
-defineWorker({ imports: { otherLib } });
+defineWorker({ imports: { myUtils, otherLib } });
 ```
 
 Now access the modules defined in the globalWorker file from the context.
