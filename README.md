@@ -1,5 +1,7 @@
 # NativeScript Tasks
 
+⚠️ This repository has been moved to [@nativescript-use](https://github.com/NativeScript-Use/NativeScript-Use/tree/main/packages/nativescript-task) ⚠️
+
 A [NativeScript](https://nativescript.org/) module for simply handling background tasks via web workers. 
 
 This module will initialize a worker that will be available during the lifetime of your application and will be able to execute any task on it.
